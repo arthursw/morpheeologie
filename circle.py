@@ -2,14 +2,14 @@ import math
 
 radius = 20
 n_drops = 20
-pos_z_up = 100
-pos_z_down = 100
-inject_min = -10
-inject_max = -10
-inject_amount = -10
-speed_min = 8000
-speed_max = 8000
-speed = 8000
+pos_z_up = 102
+pos_z_down = 102
+inject_min = 0.01
+inject_max = 0.01
+inject_amount = 0.01
+speed_min = 3000
+speed_max = 3000
+speed = 3000
 skip_up = True
 both = False
 
@@ -24,7 +24,7 @@ plane_pause = 0 #in ms
 # Good Z for jar : X110     G0 Z105
 # Initialize injection : G0 E-1000
 # commands = ['G90', 'M83', 'G28 X Y', 'G0 F8000 X150 Y80', 'G0 F8000']
-commands = ['G90', 'M83', 'G0 F8000']
+commands = []# ['G90', 'M83', 'G0 F8000']
 
 commands.append(f'G0 X{center_x} Y{center_y}')
 

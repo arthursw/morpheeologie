@@ -1,18 +1,21 @@
 import trimesh
 import numpy as np
 
-box_size = [50, 50, 50]
+box_size = np.array([100, 100, 100])
+home_pos = np.array([150, 80, 112])
+
 step = 5
 step_z = 1
 
-radius = 20
-n_drops = 20
-pos_z_up = 0
-pos_z_down = -10
-inject_amount = 5
+pos_z_up = 112 # 104
+pos_z_down = 112 # 104
+inject_amount = 1.005 # 1
+vacuum_amount = -1.00 # -0.98
+speed = 3000
+inject_speed = 3000
 plane_pause = 500 #in ms
 
-mesh = trimesh.load('female_hand.glb', force='mesh')
+mesh = trimesh.load('models/female_hand.glb', force='mesh')
 
 def put_mesh_in_bounds(mesh, box_size):
     # origin = mesh.centroid.copy()
@@ -20,9 +23,11 @@ def put_mesh_in_bounds(mesh, box_size):
     # for v in mesh.vertices:
     #     for i in range(3):
     #         v[i] = ((v[i] - origin[i]) / (size[i] / 2.0)) * box_size[i] / 2.0
-    mesh.apply_scale(1/mesh.extents)
+    # mesh.apply_scale(1/mesh.extents)
+    mesh.apply_scale(1/np.full(3, np.max(mesh.extents)))
     mesh.apply_translation(-mesh.centroid)
     mesh.apply_scale(box_size)
+    # mesh.apply_translation(home_pos-box_size/2) # not working...
     return mesh
 
 # def create_trajetory(slice, step):
@@ -48,8 +53,18 @@ def put_mesh_in_bounds(mesh, box_size):
 #     trajectory.append(vertices[0])
 #     return trajectory
 
+# def create_trajetory(slice, step):
+#     return slice.vertices
+
 def create_trajetory(slice, step):
-    return slice.vertices
+    vertices = list(slice.vertices)
+    v = vertices.pop()
+    trajectory = [v]
+    while len(trajectory) < len(slice.vertices):
+        distances = [np.linalg.norm(v-vi) for vi in vertices]
+        v = vertices.pop(np.argmin(distances))
+        trajectory.append(v)
+    return trajectory
 
 def slice_mesh(mesh, step_z, step, box_size):
     current_distance = 0
@@ -92,33 +107,49 @@ def create_trajectories_cubes(trajectories):
     return trimesh.Trimesh(vertices=vertices, faces=faces)
 
 def trajectories_to_gcode(trajectories):
-    commands = ['G91', 'G0 F5000'] # Put in relative mode and set speed to 5000
+    commands = [] # Put in relative mode and set speed to 5000
 
+    xs = []
+    ys = []
+    zs = []
+    height = 0
+    
     for trajectory in trajectories:
         
         for p in trajectory:
             # go to position
-            commands.append(f'G0 X{p[0]:.2f} Y{p[1]:.2f}')
+            x = p[0] + home_pos[0]
+            # Warning X in the 3D space becomes X in 2D, but Z in the 3D space becomes Y
+            y = p[2] + home_pos[1]
+            xs.append(x)
+            ys.append(y)
+            zs.append(pos_z_down+height)
+            zs.append(pos_z_up+height)
+
+            commands.append(f'G0 X{x:.2f} Y{y:.2f} F{speed:.2f}')
             # down
-            commands.append(f'G0 Z{pos_z_down}')
+            commands.append(f'G0 Z{pos_z_down+height}')
             # inject
-            commands.append(f'G0 E{inject_amount}')
+            commands.append(f'G0 E{inject_amount} F{inject_speed:.2f}')
+            commands.append(f'G0 E{vacuum_amount} F{inject_speed:.2f}')
             # up
-            commands.append(f'G0 Z{pos_z_up}')
+            commands.append(f'G0 Z{pos_z_up+height} F{speed:.2f}')
+
         # pause
         commands.append(f'G4 P{plane_pause}')
+        height += 1
+    
+    print(f'xmin: {np.min(xs):.2f}, xmax: {np.max(xs):.2f}, ymin: {np.min(ys):.2f}, ymax: {np.max(ys):.2f}, zmin: {np.min(zs):.2f}, zmax: {np.max(zs):.2f}')
     return commands
 
-print(mesh.extents)
-print(mesh.centroid)
 mesh = put_mesh_in_bounds(mesh, box_size)
 # mesh.show()
 trajectories = slice_mesh(mesh, step_z, step, box_size)
-viz = create_trajectories_cubes(trajectories)
-viz.show()
+# viz = create_trajectories_cubes(trajectories)
+# viz.show()
 
-# commands = trajectories_to_gcode(trajectories)
+commands = trajectories_to_gcode(trajectories)
 
-# with open('mesh.gcode', 'w') as f:
-#     for command in commands:
-#         f.write(command+'\n')
+with open('mesh.gcode', 'w') as f:
+    for command in commands:
+        f.write(command+'\n')
