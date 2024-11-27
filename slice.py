@@ -5,15 +5,16 @@ box_size = np.array([100, 100, 100])
 home_pos = np.array([150, 80, 112])
 
 step = 5
-step_z = 1
+step_z = 5
 
 pos_z_up = 112 # 104
 pos_z_down = 112 # 104
-inject_amount = 1.005 # 1
+# inject_amount = 1.005 # 1
+inject_amount = 0.005 # 1
 vacuum_amount = -1.00 # -0.98
 speed = 3000
 inject_speed = 3000
-plane_pause = 500 #in ms
+plane_pause = 0 #in ms
 
 # Threshold above which the head will go up, travel, and go down
 small_move_length = 5 # in mm
@@ -154,7 +155,7 @@ def trajectories_to_gcode(trajectories):
             
             # inject
             commands.append(f'G0 E{inject_amount} F{inject_speed:.2f}')
-            commands.append(f'G0 E{vacuum_amount} F{inject_speed:.2f}')
+            # commands.append(f'G0 E{vacuum_amount} F{inject_speed:.2f}')
             
             current_position = target_position
 
